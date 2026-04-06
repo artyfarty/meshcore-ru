@@ -1,4 +1,5 @@
 #include "SSD1306Display.h"
+#include "glcdfont_ru.h"
 
 bool SSD1306Display::i2c_probe(TwoWire& wire, uint8_t addr) {
   wire.beginTransmission(addr);
@@ -49,7 +50,7 @@ void SSD1306Display::startFrame(Color bkg) {
   _color = SSD1306_WHITE;
   display.setTextColor(_color);
   display.setTextSize(1);
-  display.cp437(true);         // Use full 256 char 'Code Page 437' font
+  display.cp437(true);
 }
 
 void SSD1306Display::setTextSize(int sz) {
@@ -66,7 +67,41 @@ void SSD1306Display::setCursor(int x, int y) {
 }
 
 void SSD1306Display::print(const char* str) {
-  display.print(str);
+  // UTF-8 decode with Cyrillic mapping to custom font indices 0x80-0xC1
+  // А-Я = 0x80-0x9F, а-я = 0xA0-0xBF, Ё = 0xC0, ё = 0xC1
+  const uint8_t* p = (const uint8_t*)str;
+  while (*p) {
+    if (*p < 0x80) {
+      display.write(*p++);
+    } else if (p[0] == 0xD0 && p[1] >= 0x90 && p[1] <= 0xAF) {
+      // А-Я (U+0410-U+042F) → 0x80-0x9F
+      display.write(0x80 + (p[1] - 0x90));
+      p += 2;
+    } else if (p[0] == 0xD0 && p[1] >= 0xB0 && p[1] <= 0xBF) {
+      // а-п (U+0430-U+043F) → 0xA0-0xAF
+      display.write(0xA0 + (p[1] - 0xB0));
+      p += 2;
+    } else if (p[0] == 0xD1 && p[1] >= 0x80 && p[1] <= 0x8F) {
+      // р-я (U+0440-U+044F) → 0xB0-0xBF
+      display.write(0xB0 + (p[1] - 0x80));
+      p += 2;
+    } else if (p[0] == 0xD0 && p[1] == 0x81) {
+      // Ё (U+0401) → 0xC0
+      display.write(0xC0);
+      p += 2;
+    } else if (p[0] == 0xD1 && p[1] == 0x91) {
+      // ё (U+0451) → 0xC1
+      display.write(0xC1);
+      p += 2;
+    } else if (*p >= 0xC0) {
+      // Skip unknown multi-byte UTF-8
+      p++;
+      while (*p && (*p & 0xC0) == 0x80) p++;
+    } else {
+      display.write('?');
+      p++;
+    }
+  }
 }
 
 void SSD1306Display::fillRect(int x, int y, int w, int h) {

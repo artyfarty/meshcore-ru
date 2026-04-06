@@ -154,6 +154,10 @@ public:
   esp_deep_sleep_start();   // CPU halts here and never returns!
 }
 
+  void powerOff() override {
+    enterDeepSleep(0, PIN_USER_BTN);
+  }
+
   uint16_t getBattMilliVolts(){
     return PMU->getBattVoltage();
   }

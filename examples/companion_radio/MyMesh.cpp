@@ -560,7 +560,8 @@ void MyMesh::onChannelMessageRecv(const mesh::GroupChannel &channel, mesh::Packe
   if (getChannel(channel_idx, channel_details)) {
     channel_name = channel_details.name;
   }
-  if (_ui) _ui->newMsg(path_len, channel_name, text, offline_queue_len);
+  // Don't spam screen with public channel (index 0) messages
+  if (_ui && channel_idx != 0) _ui->newMsg(path_len, channel_name, text, offline_queue_len);
 #endif
 }
 

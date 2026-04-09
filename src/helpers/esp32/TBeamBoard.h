@@ -155,7 +155,15 @@ public:
 }
 
   void powerOff() override {
-    enterDeepSleep(0, PIN_USER_BTN);
+    // True power off via PMU shutdown. Only RST wakes.
+    // Radio is already powered off by UITask::shutdown() before this call.
+    if (PMU) {
+      PMU->setChargingLedMode(XPOWERS_CHG_LED_OFF);
+      PMU->shutdown();  // cuts all power rails, ~µA draw
+    }
+    // Fallback if no PMU
+    esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
+    esp_deep_sleep_start();
   }
 
   uint16_t getBattMilliVolts(){

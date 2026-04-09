@@ -73,7 +73,11 @@ public:
   }
 
   void powerOff() override {
-    enterDeepSleep(0, PIN_USER_BTN);
+    // True power off: kill LoRa, VEXT, deep sleep with no wake sources.
+    // Only RST button (hardware reset) will bring the device back.
+    periph_power.release();  // cut VEXT (display, peripherals)
+    esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
+    esp_deep_sleep_start();
   }
 
   uint16_t getBattMilliVolts() override {

@@ -1,4 +1,5 @@
 #include "ST7789LCDDisplay.h"
+#include "glcdfont_ru.h"
 
 #ifndef DISPLAY_ROTATION
   #define DISPLAY_ROTATION 3
@@ -127,6 +128,10 @@ void ST7789LCDDisplay::setCursor(int x, int y) {
 
 void ST7789LCDDisplay::print(const char* str) {
   display.print(str);
+}
+
+void ST7789LCDDisplay::translateUTF8ToBlocks(char* dest, const char* src, size_t dest_size) {
+  utf8_to_cyrillic_cp437(dest, src, dest_size);
 }
 
 void ST7789LCDDisplay::fillRect(int x, int y, int w, int h) {

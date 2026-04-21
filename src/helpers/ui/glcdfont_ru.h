@@ -265,3 +265,36 @@ static const unsigned char glcdfont_ru[] PROGMEM = {
   0x00, 0x00, 0x00, 0x00, 0x00, // 0xFE
   0x00, 0x00, 0x00, 0x00, 0x00 // 0xFF
 };
+
+// Map UTF-8 Cyrillic A-Ya/a-ya/Yo/yo to our patched font indices 0x80-0xC1.
+// Non-Cyrillic multi-byte UTF-8 → '?'. ASCII pass through unchanged.
+// Destination must hold dest_size bytes; output is NUL-terminated.
+static inline void utf8_to_cyrillic_cp437(char* dest, const char* src, size_t dest_size) {
+  const unsigned char* p = (const unsigned char*)src;
+  size_t j = 0;
+  while (*p && j < dest_size - 1) {
+    if (*p < 0x80) {
+      dest[j++] = (char)*p++;
+    } else if (p[0] == 0xD0 && p[1] >= 0x90 && p[1] <= 0xAF) {
+      dest[j++] = (char)(0x80 + (p[1] - 0x90));  // A-Ya
+      p += 2;
+    } else if (p[0] == 0xD0 && p[1] >= 0xB0 && p[1] <= 0xBF) {
+      dest[j++] = (char)(0xA0 + (p[1] - 0xB0));  // a-p (Cyrillic)
+      p += 2;
+    } else if (p[0] == 0xD1 && p[1] >= 0x80 && p[1] <= 0x8F) {
+      dest[j++] = (char)(0xB0 + (p[1] - 0x80));  // r-ya
+      p += 2;
+    } else if (p[0] == 0xD0 && p[1] == 0x81) {
+      dest[j++] = (char)0xC0;  // Yo
+      p += 2;
+    } else if (p[0] == 0xD1 && p[1] == 0x91) {
+      dest[j++] = (char)0xC1;  // yo
+      p += 2;
+    } else {
+      dest[j++] = '?';
+      p++;
+      while (*p && (*p & 0xC0) == 0x80) p++;
+    }
+  }
+  dest[j] = 0;
+}

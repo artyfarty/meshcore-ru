@@ -6,14 +6,16 @@
 
 ## Изменения
 
-### Кириллица на OLED
-Кастомный 5x7 шрифт с глифами А-Яа-яЁё. UTF-8 декодируется в `SSD1306Display::print()`, pre-build скрипт (`patch_font.py`) патчит `glcdfont.c` в Adafruit GFX при каждой сборке.
+### Кириллица на OLED/TFT
+Кастомный 5x7 шрифт с глифами А-Яа-яЁё (0x80-0xC1). Pre-build скрипт (`patch_font.py`) патчит `glcdfont.c` в Adafruit GFX при каждой сборке.
+
+UI (`companion_radio/ui-new`) прогоняет все строки через `translateUTF8ToBlocks` до отрисовки. Переопределяем его в `SSD1306Display` и `ST7789LCDDisplay`: кириллица UTF-8 маппится в индексы 0x80-0xC1, что корректно работает и с `getTextWidth`/`drawTextEllipsized` (единственный байт на символ). `SSD1306Display::print` также декодирует сырой UTF-8 — для code paths, минующих UI-слой.
 
 ### Фильтр Public канала на экране
 Сообщения из Public канала (index 0) не показываются на OLED. Канал по-прежнему работает и виден в приложении.
 
 ### Power Off (true shutdown)
-- **Heltec V3**: отключает VEXT (периферия), deep sleep без wake sources. Потребление ~µA. Пробуждение только по RST.
+- **Heltec V3/V4**: отключает VEXT (периферия), deep sleep без wake sources. Потребление ~µA. Пробуждение только по RST.
 - **T-Beam**: вызывает `PMU->shutdown()` через AXP PMU. Полное обесточивание. Пробуждение только по RST.
 - Пункт меню переименован из "hibernate" в "power off".
 
@@ -24,6 +26,7 @@
 
 Собрано и протестировано:
 - Heltec V3 (BLE companion)
+- Heltec V4 OLED (BLE companion)
 - LilyGo T-Beam v1.1/v1.2 SX1276 (BLE companion)
 - LilyGo T-Beam v1.1/v1.2 SX1276 (WiFi companion)
 
@@ -32,6 +35,9 @@
 ```bash
 # Heltec V3 BLE
 pio run -e Heltec_v3_companion_radio_ble
+
+# Heltec V4 BLE (OLED)
+pio run -e heltec_v4_companion_radio_ble
 
 # T-Beam SX1276 BLE
 pio run -e Tbeam_SX1276_companion_radio_ble

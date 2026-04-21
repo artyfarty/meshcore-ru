@@ -67,41 +67,30 @@ void SSD1306Display::setCursor(int x, int y) {
 }
 
 void SSD1306Display::print(const char* str) {
-  // UTF-8 decode with Cyrillic mapping to custom font indices 0x80-0xC1
-  // А-Я = 0x80-0x9F, а-я = 0xA0-0xBF, Ё = 0xC0, ё = 0xC1
+  // Accept either raw UTF-8 or already-remapped Cyrillic bytes (0x80-0xC1).
+  // UI typically calls translateUTF8ToBlocks() first (below), so most inputs
+  // are already single-byte. This decoder still handles raw UTF-8 for code
+  // paths that bypass the UI layer.
   const uint8_t* p = (const uint8_t*)str;
   while (*p) {
-    if (*p < 0x80) {
-      display.write(*p++);
-    } else if (p[0] == 0xD0 && p[1] >= 0x90 && p[1] <= 0xAF) {
-      // А-Я (U+0410-U+042F) → 0x80-0x9F
-      display.write(0x80 + (p[1] - 0x90));
-      p += 2;
+    if (p[0] == 0xD0 && p[1] >= 0x90 && p[1] <= 0xAF) {
+      display.write(0x80 + (p[1] - 0x90)); p += 2;
     } else if (p[0] == 0xD0 && p[1] >= 0xB0 && p[1] <= 0xBF) {
-      // а-п (U+0430-U+043F) → 0xA0-0xAF
-      display.write(0xA0 + (p[1] - 0xB0));
-      p += 2;
+      display.write(0xA0 + (p[1] - 0xB0)); p += 2;
     } else if (p[0] == 0xD1 && p[1] >= 0x80 && p[1] <= 0x8F) {
-      // р-я (U+0440-U+044F) → 0xB0-0xBF
-      display.write(0xB0 + (p[1] - 0x80));
-      p += 2;
+      display.write(0xB0 + (p[1] - 0x80)); p += 2;
     } else if (p[0] == 0xD0 && p[1] == 0x81) {
-      // Ё (U+0401) → 0xC0
-      display.write(0xC0);
-      p += 2;
+      display.write(0xC0); p += 2;
     } else if (p[0] == 0xD1 && p[1] == 0x91) {
-      // ё (U+0451) → 0xC1
-      display.write(0xC1);
-      p += 2;
-    } else if (*p >= 0xC0) {
-      // Skip unknown multi-byte UTF-8
-      p++;
-      while (*p && (*p & 0xC0) == 0x80) p++;
+      display.write(0xC1); p += 2;
     } else {
-      display.write('?');
-      p++;
+      display.write(*p++);  // ASCII or pre-remapped byte — write as-is
     }
   }
+}
+
+void SSD1306Display::translateUTF8ToBlocks(char* dest, const char* src, size_t dest_size) {
+  utf8_to_cyrillic_cp437(dest, src, dest_size);
 }
 
 void SSD1306Display::fillRect(int x, int y, int w, int h) {

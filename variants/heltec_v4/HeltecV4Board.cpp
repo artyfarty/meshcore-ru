@@ -76,7 +76,11 @@ void HeltecV4Board::begin() {
   }
 
   void HeltecV4Board::powerOff()  {
-    enterDeepSleep(0);
+    // True power off: kill VEXT, deep sleep with no wake sources.
+    // Only RST button (hardware reset) will bring the device back.
+    periph_power.release();  // cut VEXT (display, peripherals)
+    esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
+    esp_deep_sleep_start();
   }
 
   uint16_t HeltecV4Board::getBattMilliVolts()  {
